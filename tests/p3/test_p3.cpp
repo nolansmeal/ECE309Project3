@@ -1,5 +1,4 @@
-
- // tests/p3/test_p3.cpp — YOUR P3 TEST SUITE.
+// tests/p3/test_p3.cpp — YOUR P3 TEST SUITE.
 //
 // The five tests below are worked examples. Keep them, and add your own
 // until you have AT LEAST 15 (spec §6 lists what must be covered).
