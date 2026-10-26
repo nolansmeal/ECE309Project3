@@ -1,4 +1,3 @@
-
 // src/tools/workspace.cpp — YOU IMPLEMENT (spec §4.4).
 //
 // Workspace::resolve: a purely lexical check.
