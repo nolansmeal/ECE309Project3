@@ -1,3 +1,4 @@
+
 // src/tools/workspace.cpp — YOU IMPLEMENT (spec §4.4).
 //
 // Workspace::resolve: a purely lexical check.
@@ -62,8 +63,14 @@ bool Workspace::resolve(std::string_view user_path, fs::path* out,
     // Remove unnecessary "." and ".." components
     fs::path normalized = path.lexically_normal();
 
-    // Combine the normalized path with the workspace root
-    *out = root() / normalized;
+    // If the normalized path is ".", return the workspace root
+    if (normalized == ".") {
+        *out = root();
+    }
+    else {
+        // Otherwise, combine the normalized path with the workspace root
+        *out = root() / normalized;
+    }
 
     // Clear any previous error message
     reason->clear();

@@ -1,13 +1,14 @@
-// tests/p3/test_p3.cpp — YOUR P3 TEST SUITE.
+
+ // tests/p3/test_p3.cpp — YOUR P3 TEST SUITE.
 //
 // The five tests below are worked examples. Keep them, and add your own
 // until you have AT LEAST 15 (spec §6 lists what must be covered).
 // Name every test <area>_<what>: reg_ for the registry, ws_ for the
 // workspace, calc_ for the calculator.
 //
-// Build & run:   cmake --build build && ./build/test_p3
-// One area:      ./build/test_p3 reg_
-// One test:      ./build/test_p3 =reg_add_and_find
+// Build & run: cmake --build build && ./build/test_p3
+// One area:    ./build/test_p3 reg_
+// One test:    ./build/test_p3 =reg_add_and_find
 
 #include "../mini_test.h"
 #include "../test_helpers.h"
@@ -307,7 +308,24 @@ TEST(ws_normalized_path) {
           (ws.root() / "notes.txt").lexically_normal());
 }
 
-// Test 14: Verify that subtraction evaluates left to right
+// Test 14: Verify that "." and "a/.." resolve to the workspace root
+TEST(ws_current_directory) {
+    TempDir d;
+    Workspace ws(d.path());
+
+    fs::path out;
+    std::string reason;
+
+    // "." should resolve directly to the workspace root
+    REQUIRE(ws.resolve(".", &out, &reason));
+    CHECK(out == ws.root());
+
+    // "a/.." should also resolve directly to the workspace root
+    REQUIRE(ws.resolve("a/..", &out, &reason));
+    CHECK(out == ws.root());
+}
+
+// Test 15: Verify that subtraction evaluates left to right
 TEST(calc_left_to_right) {
     double v = 0;
     std::string err;
@@ -322,7 +340,7 @@ TEST(calc_left_to_right) {
     CHECK(v == 7);
 }
 
-// Test 15: Verify that parentheses override precedence
+// Test 16: Verify that parentheses override precedence
 TEST(calc_parentheses) {
     double v = 0;
     std::string err;
@@ -337,7 +355,7 @@ TEST(calc_parentheses) {
     CHECK(v == 15);
 }
 
-// Test 16: Verify that negative numbers work correctly
+// Test 17: Verify that negative numbers work correctly
 TEST(calc_negative_numbers) {
     double v = 0;
     std::string err;
@@ -350,6 +368,122 @@ TEST(calc_negative_numbers) {
 
     REQUIRE(eval("3 + -2", &v, &err));
     CHECK(v == 1);
+}
+
+// Test 18: Verify all remaining valid workspace paths
+TEST(ws_all_valid_paths) {
+    TempDir d;
+    Workspace ws(d.path());
+
+    fs::path out;
+    std::string reason;
+
+    // Normalize current directory and duplicate slashes
+    REQUIRE(ws.resolve("./notes//todo.txt", &out, &reason));
+    CHECK(out == ws.root() / "notes" / "todo.txt");
+
+    // Resolve a parent directory without leaving the workspace
+    REQUIRE(ws.resolve("a/../b", &out, &reason));
+    CHECK(out == ws.root() / "b");
+
+    // Resolve a path that does not exist yet
+    REQUIRE(ws.resolve("new/dir/file.txt", &out, &reason));
+    CHECK(out == ws.root() / "new" / "dir" / "file.txt");
+
+    // Two dots within a filename are allowed
+    REQUIRE(ws.resolve("my..notes.txt", &out, &reason));
+    CHECK(out == ws.root() / "my..notes.txt");
+}
+
+// Test 19: Verify all remaining invalid workspace paths
+TEST(ws_all_invalid_paths) {
+    TempDir d;
+    Workspace ws(d.path());
+
+    fs::path out;
+    std::string reason;
+
+    // Reject a path that starts outside the workspace
+    reason.clear();
+    CHECK(!ws.resolve("..", &out, &reason));
+    CHECK(!reason.empty());
+
+    // Reject a path that escapes through multiple parent directories
+    reason.clear();
+    CHECK(!ws.resolve("a/../../b", &out, &reason));
+    CHECK(!reason.empty());
+
+    // Reject a path that escapes and then returns toward the workspace
+    reason.clear();
+    CHECK(!ws.resolve("notes/../../ws/notes/todo.txt", &out, &reason));
+    CHECK(!reason.empty());
+}
+
+// Test 20: Verify decimals and additional calculator expressions
+TEST(calc_additional_expressions) {
+    double v = 0;
+    std::string err;
+
+    // Negative numbers multiplied together
+    REQUIRE(eval("-3 * -3", &v, &err));
+    CHECK(v == 9);
+
+    // Division resulting in a decimal
+    REQUIRE(eval("7 / 2", &v, &err));
+    CHECK(v == 3.5);
+
+    // Division evaluated from left to right
+    REQUIRE(eval("100 / 10 / 5", &v, &err));
+    CHECK(v == 2);
+
+    // Additional expression 1
+    REQUIRE(eval("1.5 + 2.5 * 2", &v, &err));
+    CHECK(v == 6.5);
+
+    // Additional expression 2
+    REQUIRE(eval("(8 - 3) / 2", &v, &err));
+    CHECK(v == 2.5);
+}
+
+// Test 21: Verify the calculator handles 5,000 nested parentheses
+TEST(calc_deep_parentheses) {
+    double v = 0;
+    std::string err;
+
+    std::string expression;
+
+    // Add 5,000 opening parentheses
+    for (int i = 0; i < 5000; i++) {
+        expression += "(";
+    }
+
+    // Add the number inside the parentheses
+    expression += "42";
+
+    // Add 5,000 closing parentheses
+    for (int i = 0; i < 5000; i++) {
+        expression += ")";
+    }
+
+    REQUIRE(eval(expression, &v, &err));
+    CHECK(v == 42);
+}
+
+// Test 22: Verify the calculator handles 20,000 additions
+TEST(calc_long_expression) {
+    double v = 0;
+    std::string err;
+
+    std::string expression = "1";
+
+    // Build an expression with 20,000 addition operators
+    for (int i = 0; i < 20000; i++) {
+        expression += "+1";
+    }
+
+    // 20,001 total numbers, each equal to 1
+    REQUIRE(eval(expression, &v, &err));
+    CHECK(v == 20001);
 }
 
 int main(int argc, char** argv) {
